@@ -1,0 +1,56 @@
+<ng-template #content let-c="close" let-d="dismiss">
+  <div class="modal-header">
+    <h4 class="modal-title">Daily Trade Review</h4>
+    <button type="button" class="close" aria-label="Close" (click)="d('Cross click')">
+      <span aria-hidden="true">&times;</span>
+    </button>
+  </div>
+  <div class="modal-body">
+    <div style="background-color:#f3f3f3;padding:10px;">
+      <div>
+        <strong>{{today | date :'fullDate'}}-{{today | date :'h:mm:ss z'}}</strong>
+        <!--<strong>{{today | date:'MMM d, y h:mm:ss z'}}</strong>-->
+      </div>
+      <hr>
+      <form novalidate class="form-horizontal" [formGroup]="dtrForm">
+        <div class="form-group row">
+          <label class="col-md-2 col-form-label" >FP Codes</label>
+          <div class="col-md-10">
+            <input type="text" class="form-control"  formControlName="fpCode"/>
+          </div>
+        </div>
+        <div class="form-group row">
+            <label class="col-md-2 col-form-label">Process Date</label>
+            <div class="col-md-8">
+                <input type="numeric" class="form-control" formControlName="processDate" [(ngModel)]="selectedDate">
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-secondary" placement="left" type="button" 
+                  [ngbPopover]="calendarPopUp" [autoClose]="'outside'" triggers="manual" #p="ngbPopover" (click)="calendarClicked(p)">
+                    
+                    <img src="img/calendar-icon.svg" style="width: 1.2rem; height: 1rem; cursor: pointer;" />
+                </button>
+              </div>
+            </div>
+            <div class="form-group row">
+                <label class="col-md-9 col-form-label"></label>
+                <div class="col-md-3">
+                  <button type="submit" class="!dtrForm.valid ? btn btn-ms btn-primary : btn btn-ms btn-light" [disabled]="!dtrForm.valid">Retrieve DTR</button>
+                  <!--class="!dtrForm.valid ? btn btn-ms btn-primary : btn btn-ms btn-light"-->
+                  </div>
+              </div>
+      </form>
+    </div>
+  </div>
+</ng-template>
+<ng-template #calendarPopUp>
+  <dtr-calendar (selectedDateChange)="populateSelectedDateInModel($event)" [selectedDate]="selectedDate"></dtr-calendar>
+</ng-template>
+
+
+
+
+
+
+
+
