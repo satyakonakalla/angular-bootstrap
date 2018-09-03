@@ -1,5 +1,10 @@
 import { Component, OnInit, Output, EventEmitter, Input, SimpleChanges } from '@angular/core';
-import { NgbDate, NgbCalendar } from '@ng-bootstrap/ng-bootstrap';
+import { NgbDate, NgbCalendar, NgbDateStruct } from '@ng-bootstrap/ng-bootstrap';
+import { NgbMomentjsAdapter} from '../moment/ngb-momentjs-adapter';
+import * as $ from 'jquery';
+import * as momentholiday from 'moment-holiday';
+import * as moment from 'moment';
+
 
 @Component({
     selector: 'dtr-calendar',
@@ -47,7 +52,8 @@ export class DtrCalendarComponent implements OnInit {
 
     @Output() selectedDateChange = new EventEmitter();
 
-    constructor(calendar: NgbCalendar) { }
+    constructor(private calendar: NgbCalendar,
+        private ngbMomentAdapter: NgbMomentjsAdapter) { }
 
     ngOnInit() {
         this.radioValChanged();
@@ -96,7 +102,15 @@ export class DtrCalendarComponent implements OnInit {
         return ngbDate;
      }
 
+     getMomentDate(date: NgbDateStruct){
+        let momentDate:moment.Moment = this.ngbMomentAdapter.toModel(date);
+        let result:any = momentholiday.moment().holiday(momentDate);
+        console.log(momentDate)
+     }
+
     selectDate(date: NgbDate) {
+
+        this.getMomentDate(date);
 
         this.fromDateErrorMsg = "";
         if (this.dateReviewAuditType == 'review') {
@@ -123,13 +137,20 @@ export class DtrCalendarComponent implements OnInit {
             //   this.fromDate = date;
             // }
 
+
             this.checkFutureDate(this.fromDate);
 
             if (this.fromDate) {
                 this.checkFromDateValidity(this.fromDate);
             }
 
+            if (this.toDate) {
+                this.checkFutureDate(this.toDate);
+            }
+
             if (this.fromDate && this.toDate) {
+                
+
                 let isValid = this.daysDiffernceValid(this.fromDate, this.toDate);
 
                 if (isValid) {
@@ -170,17 +191,22 @@ export class DtrCalendarComponent implements OnInit {
     getPreviousSpecifiedWorkingsDaysBackDate(): Date {
 
         let todayDate: Date = new Date();
-        let workingDaysCounter: number = 1;
+        todayDate.setDate(todayDate.getDate() - 1);
+        let workingDaysCounter: number = 0;
 
         while (true) {
             let weekDay = todayDate.getDay();
             if (weekDay != 0 && weekDay != 6) { //0 - sunday, 6 - saturday
                 workingDaysCounter = workingDaysCounter + 1;
             }
-            todayDate.setDate(todayDate.getDate() - 1);
+            //console.log("workingDaysCounter-->"+workingDaysCounter);
             if (workingDaysCounter >= 20) {
                 break;
             }
+
+            todayDate.setDate(todayDate.getDate() - 1);
+
+            
         }
         return todayDate;
     }
@@ -228,16 +254,39 @@ export class DtrCalendarComponent implements OnInit {
     }
 
     checkFromDateValidity(fromDate: NgbDate) {
-        let date: Date = new Date(fromDate.year, fromDate.month - 1, fromDate.day);
-        let weekDay = date.getDay();
+        let todayDate: Date = new Date();
+        let selectedFromDate: Date = new Date(fromDate.year, fromDate.month - 1, fromDate.day);
+        var timeDiff = Math.abs(todayDate.getTime() - selectedFromDate.getTime());
+        var diffDays = Math.ceil(timeDiff / (1000 * 3600 * 24));
 
-        if (weekDay != 0) { //0 - sunday, 6 - saturday
-            this.fromDateErrorMsg = "Starting day must be sunday";
+        let currWeekDay = todayDate.getDay();
+
+        console.log(currWeekDay+"--"+diffDays)
+
+        if (diffDays <= currWeekDay) {
+            this.fromDateErrorMsg = "Current week date is not selectable";
             this.toDate = null;
             this.fromDate = null;
             this.hoveredDate = null;
+            return false;
+        } else {
+            return true;
         }
+
+        
     }
+
+    // checkFromDateValidity(fromDate: NgbDate) {
+    //     let date: Date = new Date(fromDate.year, fromDate.month - 1, fromDate.day);
+    //     let weekDay = date.getDay();
+
+    //     if (weekDay != 0) { //0 - sunday, 6 - saturday
+    //         this.fromDateErrorMsg = "Starting day must be sunday";
+    //         this.toDate = null;
+    //         this.fromDate = null;
+    //         this.hoveredDate = null;
+    //     }
+    // }
 
     checkFutureDate(ngbDate:NgbDate) {
         let date: Date = new Date();
@@ -265,6 +314,14 @@ export class DtrCalendarComponent implements OnInit {
     isRange = (date: NgbDate) => {
         //console.log('isRange-->'+date.day)
         return date.equals(this.fromDate) || date.equals(this.toDate) || this.isInside(date) || this.isHovered(date);
+    }
+
+    isWeekend = (date: NgbDate) => {
+        //console.log('isRange-->'+date.day)
+        if(this.dateReviewAuditType == 'review'){
+            return this.calendar.getWeekday(date) >= 6;
+        }
+        
     }
 
 }

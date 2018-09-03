@@ -29,9 +29,10 @@
         <ngb-datepicker #datePicker [(ngModel)]="calCurrSelectedDate" name="date-picker" (select)="selectDate($event)" 
         [minDate]="getMinDateVal()" 
         [maxDate]="getMaxDateVal()" 
-        [dayTemplate]="dateReviewAuditType == 'audit' ? t : ''">
+        [dayTemplate]="dateReviewAuditType == 'audit' ? t : ''" 
+        [markDisabled]="isWeekend">
       </ngb-datepicker>
-      <ng-template #t let-date="date" let-focused="focused" let-disabled="disabled">
+      <ng-template #t let-date="date" let-focused="focused" let-disabled="disabled" >
           <span class="custom-day"
                 [class.focused]="focused"
                 [class.range]="isRange(date)"

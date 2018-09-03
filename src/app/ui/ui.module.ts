@@ -12,12 +12,18 @@ import { DtrCalendarComponent } from './datepicker/dtr-calendar.component';
 
 import { NgbModalModule } from '@ng-bootstrap/ng-bootstrap';
 
+import { NgbMomentjsAdapter } from './moment/ngb-momentjs-adapter';
+
+
+
 
 @NgModule({
   imports: [
     CommonModule, FormsModule, ReactiveFormsModule, NgbModalModule.forRoot(), NgbModule.forRoot()
   ],
-  declarations: [LayoutComponent, HeaderComponent, FooterComponent, DtrModalComponent, DtrCalendarComponent],
+  declarations: [LayoutComponent, HeaderComponent, FooterComponent, DtrModalComponent, 
+    DtrCalendarComponent],
+  providers: [NgbMomentjsAdapter],
   exports: [LayoutComponent]
 })
 export class UiModule { }
