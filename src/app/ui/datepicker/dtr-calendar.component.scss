@@ -1,0 +1,117 @@
+
+ .date_selected {
+    padding-top: 0rem;
+    padding-left: 1.5rem;
+    label {
+      font-size: 0.8rem;
+      font-weight: 500;
+      //line-height: 1.53;
+      text-align: left;
+      display: inline;
+      float: left;
+      margin: -0.4rem 0.3rem -.5rem -1.2rem;
+    }
+    input {
+      border: 1px solid #d9d9d9 !important;
+      width: 64%;
+      font-size: 1em;
+      float: left;
+      padding: 0.2rem;
+      height: 1.8rem;
+      margin: -1.2rem 0.3rem .2rem -1.2rem;
+  
+    }
+    button {
+      border: 1px solid #d9d9d9 !important;
+      font-size: 1em;
+      float: right;
+      margin: -1.2rem 0.3rem 0.2rem -0.2rem;
+    }
+  
+  }
+  
+  
+   
+   
+   
+   
+   .wdsk-dtr-popover {
+      .form-horizontal {
+        position: relative;
+        .wdsk-icon-close {
+          position: absolute;
+          top:0;
+          right:0;
+          color:#000;
+          font-size:1rem;
+          cursor: pointer;
+        }
+      }
+      .popover-header {
+        display: none;
+      }
+      .popover-body {
+        padding-top:1rem;
+      }
+      .popover{
+        top:-3.4rem !important;
+      }
+      .arrow{
+        top:1.8rem !important;
+      }
+      .pb-1 {
+        margin-bottom: 1rem;
+        padding-top: 0.5rem;
+      }
+    }
+    
+  
+  
+  
+  
+  .wdsk-datepicker-wrap {
+    ngb-datepicker {
+      
+        .custom-day {
+          border: 1px solid #ccc;
+          border-radius: 0 !important;
+          color:#038203;
+          font-size: 0.8em;
+          width: 1.9rem;
+          height: 2.6em;
+          line-height: 2.2em;
+          font-weight: bold;
+          text-align: center;
+          &:hover{
+            background-color: #038203;
+            color:#fff !important;
+          }
+          &:active {
+            background-color: #038203;
+            color:#fff !important;
+          }
+          &.text-muted{
+            background: #f1f1f1;
+            color:#1c1c1c !important;
+          }
+          &.disabled {
+            background: #f1f1f1;
+            color: #1c1c1c !important;
+            opacity: 0.5;
+          }
+          &.focused {
+            background-color: #e6e6e6;
+          }
+          &.range {
+            background-color: #038203;
+            color: #fff !important;
+          }
+          &.faded {
+            background-color: #038203;
+            
+          }
+        }
+      
+   }
+  }
+  

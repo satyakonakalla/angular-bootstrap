@@ -7,23 +7,25 @@ import { FooterComponent } from './footer/footer.component';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
-import { DtrModalComponent } from './datepicker/datepicker-popup';
-import { DtrCalendarComponent } from './datepicker/dtr-calendar.component';
-
-import { NgbModalModule } from '@ng-bootstrap/ng-bootstrap';
-
+import { DtrLibraryComponent } from './datepicker/datepicker-popup';
+import { CalendarComponent } from './datepicker/dtr-calendar.component';
+import { NgbModalModule, NgbDatepickerModule } from '@ng-bootstrap/ng-bootstrap';
 import { NgbMomentjsAdapter } from './moment/ngb-momentjs-adapter';
+import {HolidayService} from './holidays/services/holiday.service';
+import { BillpaymentsComponent } from './billpayments/billpayments.component';
+import { BillslistComponent } from './billslist/billslist.component';
 
 
 
 
 @NgModule({
   imports: [
-    CommonModule, FormsModule, ReactiveFormsModule, NgbModalModule.forRoot(), NgbModule.forRoot()
+    CommonModule, FormsModule, ReactiveFormsModule, NgbModalModule.forRoot(), NgbModule.forRoot(),
+    NgbDatepickerModule.forRoot()
   ],
-  declarations: [LayoutComponent, HeaderComponent, FooterComponent, DtrModalComponent, 
-    DtrCalendarComponent],
-  providers: [NgbMomentjsAdapter],
+  declarations: [LayoutComponent, HeaderComponent, FooterComponent, DtrLibraryComponent, 
+    CalendarComponent, BillpaymentsComponent, BillslistComponent],
+  providers: [NgbMomentjsAdapter, HolidayService],
   exports: [LayoutComponent]
 })
 export class UiModule { }

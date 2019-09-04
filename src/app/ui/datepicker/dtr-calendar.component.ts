@@ -1,327 +1,417 @@
-import { Component, OnInit, Output, EventEmitter, Input, SimpleChanges } from '@angular/core';
-import { NgbDate, NgbCalendar, NgbDateStruct } from '@ng-bootstrap/ng-bootstrap';
-import { NgbMomentjsAdapter} from '../moment/ngb-momentjs-adapter';
-import * as $ from 'jquery';
-import * as momentholiday from 'moment-holiday';
-import * as moment from 'moment';
+import { Component, OnInit, Output, EventEmitter, Input, ViewEncapsulation, SimpleChanges, ChangeDetectorRef } from '@angular/core';
+import { NgbModal, NgbDateStruct, NgbCalendar } from '@ng-bootstrap/ng-bootstrap';
 
+const REVIEW_DAYS_ELIGIBLE: number = 25;
 
 @Component({
-    selector: 'dtr-calendar',
-    templateUrl: './dtr-calendar.component.html',
-    styles: [`
-    .custom-day {
-      text-align: center;
-      padding: 0.185rem 0.25rem;
-      display: inline-block;
-      height: 2rem;
-      width: 2rem;
-    }
-    .custom-day.focused {
-      background-color: #e6e6e6;
-    }
-    .custom-day.range, .custom-day:hover {
-      background-color: rgb(2, 117, 216);
-      color: white;
-    }
-    .custom-day.faded {
-      background-color: rgba(2, 117, 216, 0.5);
-    }
-    .custom-day.disabled {
-      color: #6c757d !important;
-      border-color:#f8f9fa;
-      opacity: 0.5;
-    }
-  `]
-
+  selector: 'wdsk-app-calendar',
+  templateUrl: './dtr-calendar.component.html',
+  encapsulation: ViewEncapsulation.None,
+  styleUrls: ['./dtr-calendar.component.scss']
 })
-export class DtrCalendarComponent implements OnInit {
 
-    minDateVal: NgbDate;
-    maxDateVal: NgbDate;
-    hoveredDate: NgbDate;
-    fromDate: NgbDate;
-    toDate: NgbDate;
-    calCurrSelectedDate: NgbDate;
-    formattedDate: string;
-    dateReviewAuditType: string = 'review';
-    fromDateErrorMsg: string = "";
+export class CalendarComponent implements OnInit {
 
-    @Input("selectedDate")
-    selectedDate: string;
+  @Input("selectedDate") selectedDate: string;
+  @Output() selectedDateChange = new EventEmitter();
+  @Output() togglecalendar = new EventEmitter();
+  @Output() closePopOverOnOutsideCick = new EventEmitter();
+  ngbPopoverRef: any;
+  calCurrSelectedDate: NgbDateStruct;
+  today: number;
+  minDateVal: NgbDateStruct;
+  maxDateVal: NgbDateStruct;
+  hoveredDate: NgbDateStruct;
+  fromDate: NgbDateStruct;
+  toDate: NgbDateStruct;
+  formattedDate: string;
+  dateReviewAuditType: string;
+  isCalendarDateClicked: boolean = false;
+  datePcikerRef: any;
+  preSelectedDateType: string;
 
-    @Output() selectedDateChange = new EventEmitter();
+  readonly REVIEW: string = 'review';
+  readonly AUDIT: string = 'audit';
 
-    constructor(private calendar: NgbCalendar,
-        private ngbMomentAdapter: NgbMomentjsAdapter) { }
+  dateTypes = [{
+    value: 'review',
+    label: 'REVIEW'
+  },
+  {
+    value: 'audit',
+    label: 'AUDIT'
+  }];
 
-    ngOnInit() {
-        this.radioValChanged();
+  constructor(private modalService: NgbModal, private cdr: ChangeDetectorRef, private calendar: NgbCalendar) { }
+
+  ngOnInit() {
+    if (!this.dateReviewAuditType) {
+      this.dateReviewAuditType = this.REVIEW;
     }
+    if (!this.selectedDate) {
+      this.dateTypeSelectionChanged(this.REVIEW);
+    }
+  }
 
-    ngOnChanges(changes: SimpleChanges) {
-        for (let propName in changes) {  
-            if(propName == "selectedDate"){
-                let change = changes[propName];
-                let curVal  = change.currentValue;
-                let prevVal = change.previousValue;
-                
-                if(curVal != prevVal){
-
-                    if(curVal.indexOf("-") > 0){
-                        this.dateReviewAuditType = "audit";
-                        let inputfromDate = curVal.substring(0, 8);
-                        let inputToDate = curVal.substring(9);
-
-                        if(inputfromDate){
-                            let auditFromNgbDate = this.getNgbDateFromStringDate(inputfromDate);
-                            this.checkFutureDate(auditFromNgbDate);
-                            this.checkFromDateValidity(auditFromNgbDate);
-                            this.fromDate = auditFromNgbDate;
-                        }
-                        if(inputToDate){
-                            let auditToNgbDate = this.getNgbDateFromStringDate(inputToDate);
-                            this.checkFutureDate(auditToNgbDate);
-                            this.toDate = auditToNgbDate;
-                        }           
-                    }else{
-                        this.dateReviewAuditType = "review";
-                        let reivewNgbDate = this.getNgbDateFromStringDate(curVal);
-                        this.calCurrSelectedDate = reivewNgbDate;
-                    }                    
-                }                   
-            }           
+  ngAfterViewInit() {
+    if (this.datePcikerRef) {
+      if (this.dateReviewAuditType === this.REVIEW) {
+        if (this.calCurrSelectedDate) {
+          this.datePcikerRef.navigateTo(this.calCurrSelectedDate);
+          this.cdr.detectChanges();
         }
-     }
+      } else if (this.dateReviewAuditType === this.AUDIT) {
+        if (this.fromDate) {
+          this.datePcikerRef.navigateTo(this.fromDate);
+          this.cdr.detectChanges();
+        }
+      }
+    }
+  }
 
-     getNgbDateFromStringDate(strDate:string){
-        let year = Number(strDate.substring(0, 4));
-        let month = Number(strDate.substring(4, 6));
-        let date = Number(strDate.substring(6, 8));  
-        let ngbDate: NgbDate = new NgbDate(year, month, date);
-        return ngbDate;
-     }
-
-     getMomentDate(date: NgbDateStruct){
-        let momentDate:moment.Moment = this.ngbMomentAdapter.toModel(date);
-        let result:any = momentholiday.moment().holiday(momentDate);
-        console.log(momentDate)
-     }
-
-    selectDate(date: NgbDate) {
-
-        this.getMomentDate(date);
-
-        this.fromDateErrorMsg = "";
-        if (this.dateReviewAuditType == 'review') {
-            this.toDate = null;
-            this.fromDate = null;
-            this.hoveredDate = null;
-            let monthVal = this.prependZeroForMonth(date.month);
-            this.formattedDate = date.year.toString() + monthVal + date.day.toString();
-        } else if (this.dateReviewAuditType == 'audit') {
-
-            this.formattedDate = "";
-            this.fromDate = date;
-            let tempToDate: Date = new Date(this.fromDate.year, this.fromDate.month - 1, this.fromDate.day);
-            tempToDate.setDate(tempToDate.getDate() + 6);
-            let tempNgbToDate: NgbDate = new NgbDate(tempToDate.getFullYear(), tempToDate.getMonth() + 1, tempToDate.getDate());
-            this.toDate = tempNgbToDate;
-
-            // if (!this.fromDate && !this.toDate) {
-            //   this.fromDate = date;
-            // } else if (this.fromDate && !this.toDate && date.after(this.fromDate)) {
-            //   this.toDate = date;
-            // } else {
-            //   this.toDate = null;
-            //   this.fromDate = date;
-            // }
-
-
-            this.checkFutureDate(this.fromDate);
-
-            if (this.fromDate) {
-                this.checkFromDateValidity(this.fromDate);
+  ngOnChanges(changes: SimpleChanges) {
+    for (let propName in changes) {
+      if (propName == "selectedDate") {
+        let change = changes[propName];
+        let curVal = change.currentValue;
+        let prevVal = change.previousValue;
+        if (curVal) {
+          if (curVal.indexOf("-") > 0) {
+            this.dateReviewAuditType = "audit";
+            let inputfromDate = curVal.substring(0, 8);
+            let inputToDate = curVal.substring(9);
+            if (inputfromDate) {
+              let auditFromNgbDate = this.getNgbDateFromStringDate(inputfromDate);
+              this.checkFutureDate(auditFromNgbDate);
+              this.checkFromDateValidity(auditFromNgbDate);
+              this.fromDate = auditFromNgbDate;
             }
-
-            if (this.toDate) {
-                this.checkFutureDate(this.toDate);
+            if (inputToDate) {
+              let auditToNgbDate = this.getNgbDateFromStringDate(inputToDate);
+              this.checkFutureDate(auditToNgbDate);
+              this.toDate = auditToNgbDate;
             }
-
-            if (this.fromDate && this.toDate) {
-                
-
-                let isValid = this.daysDiffernceValid(this.fromDate, this.toDate);
-
-                if (isValid) {
-                    let fromMonthVal = this.prependZeroForMonth(this.fromDate.month);
-                    let toMonthVal = this.prependZeroForMonth(this.toDate.month);
-                    this.formattedDate = this.fromDate.year.toString() + fromMonthVal + this.fromDate.day.toString()
-                        + '-' + this.toDate.year.toString() + toMonthVal + this.toDate.day.toString();
-                }
+            if (inputfromDate && inputToDate) {
+              this.preSelectedDateType = this.AUDIT;
+              this.dateTypeSelectionChanged(this.AUDIT);
+              let isValid = this.daysDiffernceValid(this.fromDate, this.toDate);
+              if (isValid) {
+                this.formattedDate = this.getDisplayableDate(this.fromDate) + '-' + this.getDisplayableDate(this.toDate);
+              }
             }
+          } else {
+            this.preSelectedDateType = this.REVIEW;
+            this.dateTypeSelectionChanged(this.REVIEW);
+            let reivewNgbDate = this.getNgbDateFromStringDate(curVal);
+            this.calCurrSelectedDate = reivewNgbDate;
+          }
         }
+      }
     }
+  }
 
-    radioValChanged() {
-        this.formattedDate = "";
-        this.fromDateErrorMsg = "";
-
-        if (this.dateReviewAuditType == 'review') {
-            let date: Date = new Date();
-
-            let maxDate: NgbDate = new NgbDate(date.getFullYear(), date.getMonth() + 1, date.getDate());
-            this.maxDateVal = maxDate;
-
-            let reviewdate: Date = this.getPreviousSpecifiedWorkingsDaysBackDate();
-            let minDate: NgbDate = new NgbDate(reviewdate.getFullYear(), reviewdate.getMonth() + 1, reviewdate.getDate());
-            this.minDateVal = minDate;
-        } else {
-            let date: Date = new Date();
-            let maxDate: NgbDate = new NgbDate(date.getFullYear(), date.getMonth() + 1, date.getDate());
-            this.maxDateVal = maxDate;
-
-            let auditdate: Date = new Date();
-            auditdate.setFullYear(auditdate.getFullYear() - 1);
-            let minDate: NgbDate = new NgbDate(auditdate.getFullYear(), auditdate.getMonth() + 1, auditdate.getDate());
-            this.minDateVal = minDate;
+  onDateSelection(inputdate: NgbDateStruct) {
+    this.isCalendarDateClicked = true;
+    let date: NgbDateStruct = inputdate;
+    this.formattedDate = "";
+    if (this.dateReviewAuditType === this.REVIEW) {
+      this.toDate = null;
+      this.fromDate = null;
+      this.hoveredDate = null;
+      this.formattedDate = this.getDisplayableDate(date);
+      this.selectedDateChange.emit(this.formattedDate);
+    } else if (this.dateReviewAuditType === this.AUDIT) {
+      this.fromDate = date;
+      let tempFromDate: Date = new Date(this.fromDate.year, this.fromDate.month - 1, this.fromDate.day);
+      tempFromDate = this.getBackDatedDateByDays(tempFromDate, tempFromDate.getDay());
+      this.fromDate = this.covertDateTONgbDateStruct(tempFromDate);
+      let tempToDate: Date = new Date(this.fromDate.year, this.fromDate.month - 1, this.fromDate.day); tempToDate = this.getFutureDatedDateByDays(tempToDate, 6);
+      let tempNgbToDate: NgbDateStruct = this.covertDateTONgbDateStruct(tempToDate);
+      this.toDate = tempNgbToDate;
+      this.checkFutureDate(tempNgbToDate);
+      if (this.fromDate) {
+        this.checkFromDateValidity(this.fromDate);
+      }
+      if (this.toDate) {
+        this.checkFutureDate(this.toDate);
+      }
+      if (this.fromDate && this.toDate) {
+        let isValid = this.daysDiffernceValid(this.fromDate, this.toDate);
+        if (isValid) {
+          this.formattedDate = this.getDisplayableDate(this.fromDate) + '-' + this.getDisplayableDate(this.toDate);
+          this.selectedDateChange.emit(this.formattedDate);
         }
+      }
     }
+  }
 
-    getPreviousSpecifiedWorkingsDaysBackDate(): Date {
+  dateTypeRadioSelectionChanged(dateType: any) {
+    this.dateTypeSelectionChanged(dateType);
+  }
 
-        let todayDate: Date = new Date();
-        todayDate.setDate(todayDate.getDate() - 1);
-        let workingDaysCounter: number = 0;
-
-        while (true) {
-            let weekDay = todayDate.getDay();
-            if (weekDay != 0 && weekDay != 6) { //0 - sunday, 6 - saturday
-                workingDaysCounter = workingDaysCounter + 1;
-            }
-            //console.log("workingDaysCounter-->"+workingDaysCounter);
-            if (workingDaysCounter >= 20) {
-                break;
-            }
-
-            todayDate.setDate(todayDate.getDate() - 1);
-
-            
-        }
-        return todayDate;
+  dateTypeSelectionChanged(selectedVal: string) {
+    this.dateReviewAuditType = selectedVal;
+    this.formattedDate = "";
+    this.calCurrSelectedDate = null;
+    if (this.dateReviewAuditType === this.REVIEW) {
+      let date: Date = this.getBackDatedDateByDays(new Date(), 1);
+      let maxDate: NgbDateStruct = this.covertDateTONgbDateStruct(date);
+      this.maxDateVal = maxDate;
+      let reviewdate: Date = this.getPreviousSpecifiedWorkingsDaysBackDate();
+      let minDate: NgbDateStruct = this.covertDateTONgbDateStruct(reviewdate);
+      this.minDateVal = minDate;
+    } else if (this.dateReviewAuditType === this.AUDIT) {
+      let date: Date = this.getAuditMaxDate();
+      let maxDate1: NgbDateStruct = this.covertDateTONgbDateStruct(date);
+      this.maxDateVal = maxDate1;
+      let auditdate: Date = this.getAuditMaxDate();
+      auditdate.setFullYear(auditdate.getFullYear() - 1);
+      auditdate = this.getAuditDateByYearBack(auditdate);
+      let minDate1: NgbDateStruct = this.covertDateTONgbDateStruct(auditdate);
+      this.minDateVal = minDate1;
     }
+  }
 
-    getMinDateVal() {
-        return this.minDateVal;
+
+
+  getMinDateVal() {
+    return this.minDateVal;
+  }
+
+  getMaxDateVal(datePicker: any) {
+    if (datePicker) {
+      this.datePcikerRef = datePicker;
     }
+    return this.maxDateVal;
+  }
 
-    getMaxDateVal() {
-        return this.maxDateVal;
+  prependZeroForMonthORDate(dateOrMonthVal: number): string {
+    let dateOrMonthStr = dateOrMonthVal.toString();
+    if (dateOrMonthStr.length < 2) {
+      dateOrMonthStr = '0' + dateOrMonthStr;
     }
+    return dateOrMonthStr;
+  }
 
-    getTemplateVal() {
-        if (this.dateReviewAuditType == 'review') {
-            return "";
-        } else if (this.dateReviewAuditType == 'audit') {
-            return "t";
-        }
-
+  daysDiffernceValid(fromDate: NgbDateStruct, toDate: NgbDateStruct) {
+    if (fromDate && toDate) {
+      let fromDateJS: Date = new Date(fromDate.year, fromDate.month - 1, fromDate.day);
+      let toDateJS: Date = new Date(toDate.year, toDate.month - 1, this.toDate.day);
+      var timeDiff = Math.abs(toDateJS.getTime() - fromDateJS.getTime());
+      var diffDays = Math.ceil(timeDiff / (1000 * 3600 * 24));
+      if (diffDays !== 6) {
+        this.toDate = null;
+        this.fromDate = null;
+        this.hoveredDate = null;
+        return false;
+      }
+      return true;
     }
+  }
 
-    prependZeroForMonth(monthval: number): string {
-        let monthStr = monthval.toString();
-        if (monthStr.length < 2) {
-            monthStr = '0' + monthStr;
-        }
-        return monthStr;
+  checkFromDateValidity(fromDate: NgbDateStruct) {
+    let currentDate: Date = new Date();
+    let selectedFromDate: Date = new Date(fromDate.year, fromDate.month - 1, fromDate.day);
+    var timeDiff = Math.abs(currentDate.getTime() - selectedFromDate.getTime());
+    var diffDays = Math.ceil(timeDiff / (1000 * 3600 * 24));
+    let currWeekDay = currentDate.getDay();
+    if (diffDays <= currWeekDay) {
+      this.toDate = null;
+      this.fromDate = null;
+      this.hoveredDate = null;
+      return false;
     }
+    return true;
+  }
 
-    daysDiffernceValid(fromDate: NgbDate, toDate: NgbDate) {
-        let fromDateJS: Date = new Date(this.fromDate.year, this.fromDate.month - 1, this.fromDate.day);
-        let toDateJS: Date = new Date(this.toDate.year, this.toDate.month - 1, this.toDate.day);
+  getNgbDateFromStringDate(strDate: string) {
+    let year = Number(strDate.substring(0, 4));
+    let month = Number(strDate.substring(4, 6));
+    let date = Number(strDate.substring(6, 8));
+    let ngbDate: NgbDateStruct = this.covertStringTONgbDateStruct(year, month, date);
+    return ngbDate;
+  }
 
-        var timeDiff = Math.abs(toDateJS.getTime() - fromDateJS.getTime());
-        var diffDays = Math.ceil(timeDiff / (1000 * 3600 * 24));
-        if (diffDays != 6) {
-            this.fromDateErrorMsg = "Starting day must be sunday and Ending Date must be Saturday";
-            this.toDate = null;
-            this.fromDate = null;
-            this.hoveredDate = null;
-            return false;
-        } else {
-            return true;
-        }
+  isHovered = function (inputdate: NgbDateStruct) {
+    let date: NgbDateStruct = this.covertStringTONgbDateStruct(inputdate.year, inputdate.month, inputdate.day);
+    let tempFromDate: Date = this.fromDate ? new Date(this.fromDate.year, this.fromDate.month - 1, this.fromDate.day) : null;
+    let tempHoveredDate: Date = this.hoveredDate ? new Date(this.hoveredDate.year, this.hoveredDate.month - 1, this.hoveredDate.day) : null;
+    let tempinputDate: Date = new Date(date.year, date.month - 1, date.day);
+    if (tempFromDate && tempHoveredDate && tempinputDate) {
+      return this.fromDate && !this.toDate && this.hoveredDate && tempinputDate.getTime() > (tempFromDate.getTime()) && tempinputDate.getTime() < (tempHoveredDate.getTime());
     }
+    return false;
+  }.bind(this);
 
-    checkFromDateValidity(fromDate: NgbDate) {
-        let todayDate: Date = new Date();
-        let selectedFromDate: Date = new Date(fromDate.year, fromDate.month - 1, fromDate.day);
-        var timeDiff = Math.abs(todayDate.getTime() - selectedFromDate.getTime());
-        var diffDays = Math.ceil(timeDiff / (1000 * 3600 * 24));
-
-        let currWeekDay = todayDate.getDay();
-
-        console.log(currWeekDay+"--"+diffDays)
-
-        if (diffDays <= currWeekDay) {
-            this.fromDateErrorMsg = "Current week date is not selectable";
-            this.toDate = null;
-            this.fromDate = null;
-            this.hoveredDate = null;
-            return false;
-        } else {
-            return true;
-        }
-
-        
+  isInside = function (inputdate: NgbDateStruct) {
+    let date: NgbDateStruct = this.covertStringTONgbDateStruct(inputdate.year, inputdate.month, inputdate.day);//new NgbDateStruct(inputdate.year, inputdate.month, inputdate.day);
+    let tempFromDate: Date = this.fromDate ? new Date(this.fromDate.year, this.fromDate.month - 1, this.fromDate.day) : null;
+    let tempToDate: Date = this.toDate ? new Date(this.toDate.year, this.toDate.month - 1, this.toDate.day) : null;
+    let tempinputDate: Date = new Date(date.year, date.month - 1, date.day);
+    if (tempFromDate && tempToDate && tempinputDate) {
+      return tempinputDate.getTime() > (tempFromDate.getTime()) && tempinputDate.getTime() < (tempToDate.getTime())
     }
+    return false;
+  }.bind(this);
 
-    // checkFromDateValidity(fromDate: NgbDate) {
-    //     let date: Date = new Date(fromDate.year, fromDate.month - 1, fromDate.day);
-    //     let weekDay = date.getDay();
-
-    //     if (weekDay != 0) { //0 - sunday, 6 - saturday
-    //         this.fromDateErrorMsg = "Starting day must be sunday";
-    //         this.toDate = null;
-    //         this.fromDate = null;
-    //         this.hoveredDate = null;
-    //     }
-    // }
-
-    checkFutureDate(ngbDate:NgbDate) {
-        let date: Date = new Date();
-        let currDate: NgbDate = new NgbDate(date.getFullYear(), date.getMonth() + 1, date.getDate());
-
-        if (ngbDate.after(currDate)) {
-            this.toDate = null;
-            this.fromDate = null;
-            this.hoveredDate = null;
-        }         
+  isRange = function (inputdate: NgbDateStruct) {
+    let date: NgbDateStruct = this.covertStringTONgbDateStruct(inputdate.year, inputdate.month, inputdate.day);//new NgbDateStruct(inputdate.year, inputdate.month, inputdate.day);
+    let tempFromDate: Date = this.fromDate ? new Date(this.fromDate.year, this.fromDate.month - 1, this.fromDate.day) : null;
+    let tempToDate: Date = this.toDate ? new Date(this.toDate.year, this.toDate.month - 1, this.toDate.day) : null;
+    let tempinputDate: Date = new Date(date.year, date.month - 1, date.day);
+    if (tempFromDate && tempToDate && tempinputDate) {
+      return tempinputDate.getTime() === tempFromDate.getTime() || tempinputDate.getTime() === tempToDate.getTime() || this.isInside(date) || this.isHovered(date)
     }
+    return false
+  }.bind(this);
 
-    populateDate() {
-        this.selectedDateChange.emit(this.formattedDate);
+  isMouseAction = function (inputdate: NgbDateStruct) {
+    if (inputdate) {
+      let date: NgbDateStruct = this.covertStringTONgbDateStruct(inputdate.year, inputdate.month, inputdate.day);
+      this.hoveredDate = date;
     }
+    this.hoveredDate = null;
+  }.bind(this);
 
-    isHovered = (date: NgbDate) => {
-        //console.log('isHovered-->'+date.day)
-        return this.fromDate && !this.toDate && this.hoveredDate && date.after(this.fromDate) && date.before(this.hoveredDate);
+  isWeekendsDisabled = function (inputdate: NgbDateStruct) {
+    if (inputdate) {
+      let date: NgbDateStruct = this.covertStringTONgbDateStruct(inputdate.year, inputdate.month, inputdate.day);
+      if (this.isWeekend(date)) {
+        return true;
+      }
     }
-    isInside = (date: NgbDate) => {
-        //console.log('isInside-->'+date.day);
-        return date.after(this.fromDate) && date.before(this.toDate);
-    }
-    isRange = (date: NgbDate) => {
-        //console.log('isRange-->'+date.day)
-        return date.equals(this.fromDate) || date.equals(this.toDate) || this.isInside(date) || this.isHovered(date);
-    }
+    return false;
+  }.bind(this);
 
-    isWeekend = (date: NgbDate) => {
-        //console.log('isRange-->'+date.day)
-        if(this.dateReviewAuditType == 'review'){
-            return this.calendar.getWeekday(date) >= 6;
-        }
-        
+  isEligibleForDisableReview = function (date: NgbDateStruct) {
+    if (this.isWeekend(date)) {
+      return true;
     }
+    return false;
+  }.bind(this);
+
+  isEligibleForDisableAudit(date: NgbDateStruct) {
+    return false;
+  }
+
+  isWeekend(date: NgbDateStruct) {
+    let tempinputDate: Date = new Date(date.year, date.month - 1, date.day);
+    return tempinputDate.getDay() === 0 || tempinputDate.getDay() === 6;
+  }
+
+  getAuditMaxDate() {
+    let tempDate: Date = new Date();
+    if (tempDate.getDay() !== 6) {
+      return this.getBackDatedDateByDays(tempDate, tempDate.getDay() + 1);
+    } else {
+      return tempDate;
+    }
+  }
+
+  getAuditDateByYearBack(date: Date) {
+    if (date.getDay() !== 0) {
+      return this.getBackDatedDateByDays(date, date.getDay());
+    } else {
+      return date;
+    }
+  }
+
+  checkFutureDate(ngbDate: NgbDateStruct) {
+    let date: Date = new Date();
+    let tempInputDate: Date = ngbDate ? new Date(ngbDate.year, ngbDate.month - 1, ngbDate.day) : null;
+    let currDate: NgbDateStruct = this.covertDateTONgbDateStruct(date);
+    if (tempInputDate && tempInputDate.getTime() > date.getTime()) {
+      this.toDate = null;
+      this.fromDate = null;
+      this.hoveredDate = null;
+    }
+  }
+
+  getPreviousSpecifiedWorkingsDaysBackDate(): Date {
+    let previousdayDate: Date = this.getBackDatedDateByDays(new Date(), 1);
+    let workingDaysCounter: number = 0;
+    while (true) {
+      let weekDay = previousdayDate.getDay();
+      if (weekDay !== 0 && weekDay !== 6) {
+        workingDaysCounter = workingDaysCounter + 1;
+      }
+      if (workingDaysCounter >= REVIEW_DAYS_ELIGIBLE) {
+        break;
+      }
+      previousdayDate = this.getBackDatedDateByDays(previousdayDate, 1);
+    }
+    return previousdayDate;
+  }
+
+  closeCalendarPopup() {
+    this.togglecalendar.emit("close");
+  }
+
+  getBackDatedDateByDays(inputDate: Date, backDays: number) {
+    let onedayOffset = backDays * (24 * 60 * 60 * 1000);
+    inputDate.setTime(inputDate.getTime() - onedayOffset);
+    return inputDate;
+  }
+
+  getFutureDatedDateByDays(inputDate: Date, backDays: number) {
+    let onedayOffset = backDays * (24 * 60 * 60 * 1000);
+    inputDate.setTime(inputDate.getTime() + onedayOffset);
+    return inputDate;
+  }
+
+  getDisplayableDate(inputDate: NgbDateStruct) {
+    if (inputDate) {
+      let monthVal = this.prependZeroForMonthORDate(inputDate.month);
+      let dayVal = this.prependZeroForMonthORDate(inputDate.day);
+      return inputDate.year + monthVal + dayVal;
+    }
+    return "";
+  }
+
+  covertDateTONgbDateStruct(date: Date): NgbDateStruct {
+    return date ? {
+      year: date.getFullYear(),
+      month: date.getMonth() + 1,
+      day: date.getDate()
+    } : null;
+  }
+
+  covertStringTONgbDateStruct(year: number, month: number, date: number): NgbDateStruct {
+    return date ? {
+      year: year,
+      month: month,
+      day: date
+    } : null;
+  }
+
+  handleKeyPress(event: any) {
+    event.preventDefault();
+  }
+
+  inputFieldFocused(event: any, selectinputfield: any) {
+    event.preventDefault();
+    selectinputfield.blur();
+
+  }
+  closeResult: string;
+  model: NgbDateStruct;
+  date: { year: number, month: number };
+
+
+
+  selectToday() {
+    this.model = this.calendar.getToday();
+  }
+  
+  
+  getJSTime(inputDate: Date){
+	  
+  }
+
+
+
 
 }
+
+
+
