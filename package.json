@@ -26,7 +26,7 @@
     "date-holidays": "^1.2.8",
     "font-awesome": "^4.7.0",
     "jquery": "^3.3.1",
-    "moment": "^2.22.2",
+    "moment": "^2.29.4",
     "moment-holiday": "^1.5.1",
     "ng-click-outside": "^4.0.0",
     "rxjs": "^6.0.0",
